@@ -1,0 +1,44 @@
+name: FastAPI Tomato Leaf Detection CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -t tomato-leaf-api .
+
+      - name: Run Docker container
+        run: docker run -d -p 8000:8000 --name tomato_leaf_test tomato-leaf-api
+
+      - name: Wait for FastAPI to start
+        run: |
+          echo "Waiting for FastAPI to be ready..."
+          sleep 15
+
+      - name: Test FastAPI endpoint
+        run: |
+          curl --fail http://localhost:8000/docs || (echo "FastAPI did not start correctly"; exit 1)
+
+      - name: Stop and remove container
+        run: docker stop tomato_leaf_test && docker rm tomato_leaf_test
+
+      - name: Success message
+        run: echo "✅ FastAPI + Docker pipeline built and tested successfully on GitHub Actions."
